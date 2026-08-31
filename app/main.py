@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import time
@@ -13,7 +13,7 @@ from app.errors import handle_external_error
 from app.champions import CHAMPIONS
 
 
-app = FastAPI(title="League AI Assistant", version="1.0")
+app = FastAPI(title="WaveGuide", version="1.0")
 
 app.add_middleware(
     CORSMiddleware,

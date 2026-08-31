@@ -5,9 +5,6 @@ from requests import RequestException
 
 
 def handle_external_error(error: Exception) -> None:
-    print("ERROR TYPE:", type(error))
-    print("ERROR:", error)
-
     if isinstance(error, RequestException):
         raise HTTPException(
             status_code=503,
@@ -37,7 +34,7 @@ def handle_external_error(error: Exception) -> None:
                 detail={
                     "code": "DAILY_LIMIT_REACHED",
                     "message": (
-                        "LoLGPT has reached its daily AI request limit. "
+                        "WaveGuide has reached its daily AI request limit. "
                         "Please try again tomorrow."
                     )
                 }

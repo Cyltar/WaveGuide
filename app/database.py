@@ -142,7 +142,7 @@ def check_daily_ai_request_limit(user_id: str) -> None:
             status_code=429,
             detail={
                 "code": "DAILY_LIMIT_REACHED",
-                "message": "LoLGPT has reached its daily AI request limit. Please try again tomorrow."
+                "message": "WaveGuide has reached its daily AI request limit. Please try again tomorrow."
             }
         )
 
