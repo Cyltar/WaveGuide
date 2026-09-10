@@ -1,7 +1,8 @@
 from pathlib import Path
-DIR = Path(__file__).parent / "knowledge" / "season_16"
 
-TOPIC_FILES = {
+DIR = Path(__file__).parent / "season_16"
+
+TOPICS = {
     "macro": "macro.md",
     "role_quests": "role_quests.md",
     "turret_plates": "turret_plates.md",
@@ -15,7 +16,7 @@ def load_relevant_knowledge(topics: list[str]) -> str:
     content = []
 
     for topic in topics:
-        filename = TOPIC_FILES.get(topic)
+        filename = TOPICS.get(topic)
 
         if filename is not None:
             knowledge = load_knowledge_file(filename)
