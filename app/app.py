@@ -11,6 +11,7 @@ from app.supabase_client import create_user_client
 from app.query_parser import parse_query
 from app.errors import handle_external_error
 from app.champions import CHAMPIONS
+from app.knowledge.knowledge_loader import load_relevant_knowledge
 
 
 app = FastAPI(title="WaveGuide", version="1.0")
@@ -55,6 +56,7 @@ def chat(request: ChatRequest, auth: AuthenticatedUser = Depends(get_current_use
             history = []
 
         context = parse_query(message=request.message, recent_history=history)
+        season_knowledge = load_relevant_knowledge(context.knowledge_topics)
 
         player_data = None
         enemy_data = None
@@ -85,6 +87,7 @@ def chat(request: ChatRequest, auth: AuthenticatedUser = Depends(get_current_use
 
         answer = ask_gemini(
             user_message=request.message,
+            season_knowledge=season_knowledge,
             player_data=player_data,
             enemy_data=enemy_data,
             player_stats=player_stats,
@@ -111,6 +114,7 @@ def chat(request: ChatRequest, auth: AuthenticatedUser = Depends(get_current_use
             "role": context.role,
             "query_type": context.query_type,
             "matchup_stats": matchup_stats,
+            "knowledge_topics": context.knowledge_topics,
             "role_rankings": role_rankings
         }
 

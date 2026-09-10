@@ -5,6 +5,14 @@ from pydantic import BaseModel, Field
 
 from app.champions import CHAMPIONS
 
+KnowledgeTopic = Literal[
+    "macro",
+    "role_quests",
+    "turret_plates",
+    "objectives",
+    "faelights",
+    "bounties"
+]
 
 class QueryContext(BaseModel):
     player_champion: str | None
@@ -14,7 +22,7 @@ class QueryContext(BaseModel):
     query_type: Literal["build", "matchup", "strategy", "stats", "general"]
     ranking_metric: Literal["win_rate", "pick_rate", "ban_rate"] | None = None
     ranking_count: int | None = None
-
+    knowledge_topics: list[KnowledgeTopic] = Field(default_factory=list)
 
 client = genai.Client()
 
@@ -40,6 +48,7 @@ Extract these fields:
 - query_type
 - ranking_metric
 - ranking_count
+- knowledge_topics
 
 Valid roles:
 Top, Jungle, Mid, ADC, Support
@@ -121,6 +130,12 @@ IMPORTANT CONTEXT RULES
   list for requested_champions.
 - Use ONLY champion names from the normalized champion list.
 - Preserve normalized champion spelling exactly.
+- knowledge_topics should describe what is needed for the CURRENT question,
+  while using recent conversation context to resolve references.
+- Do not automatically preserve previous knowledge_topics if the new
+  question no longer needs them.
+- If the current message is a follow-up that depends on an earlier
+  mechanic, select the necessary topic again.
 
 QUERY TYPES
 
@@ -138,6 +153,140 @@ Win rate, pick rate, ban rate, statistics, rankings, tier or meta strength.
 
 general:
 Anything else related to League of Legends.
+
+KNOWLEDGE TOPICS
+
+knowledge_topics determines which current Season 16 knowledge files
+are needed to answer the user's CURRENT question.
+
+Valid knowledge topics:
+
+macro
+role_quests
+turret_plates
+objectives
+faelights
+bounties
+
+Use an empty list if no current Season 16 knowledge file is needed.
+
+Only select topics that are directly useful for answering the current
+question. Do NOT select every potentially related topic.
+
+TOPIC DEFINITIONS
+
+macro:
+General macro decision-making involving rotations, tempo, recalls,
+wave states, side-laning, cross-map trades, grouping, map pressure,
+numbers advantages, or comparing multiple possible plays.
+
+role_quests:
+Questions involving Top, Mid, Bot, Jungle, or Support quest progression,
+quest rewards, quest completion, roaming penalties, or how role quests
+affect macro decisions.
+
+turret_plates:
+Questions involving turrets, turret plates, Tier 1/Tier 2/Tier 3
+structures, inhibitors, Nexus turrets, Crystalline Overgrowth,
+Demolish, turret gold, or deciding whether turret pressure is worth
+more than another play.
+
+objectives:
+Questions involving Dragons, Dragon Soul, Void Grubs, Rift Herald,
+Baron Nashor, Elder Dragon, objective timers, objective setup,
+objective trading, Smite contests, or choosing between objectives.
+
+faelights:
+Questions involving Faelights, ward locations, side-lane safety,
+vision gaps, Control Wards, objective vision, gank safety, or
+Season 16 vision mechanics.
+
+bounties:
+Questions involving champion shutdowns, champion bounty values,
+objective bounties, comeback gold, bounty timers, trading structures
+during bounty windows, or protecting a large shutdown.
+
+KNOWLEDGE TOPIC SELECTION RULES
+
+- Select the SMALLEST set of topics needed to answer the question well.
+- Do not select a topic merely because it is generally related to League.
+- Select "macro" only when the user is asking for a decision, rotation,
+  map movement, resource tradeoff, wave/tempo decision, side-lane
+  decision, or broader macro reasoning.
+- For simple factual mechanic questions, select only the specific
+  factual topic and omit "macro".
+- Select multiple topics when the user is explicitly comparing systems.
+- Use recent conversation context when the current message is a follow-up.
+- If none of the Season 16 knowledge files are relevant, return an empty list.
+- Do not select knowledge topics for general champion gameplay advice unless
+  the answer specifically depends on a current Season 16 system contained in
+  the knowledge files.
+- Champion abilities, matchup strategy, trading patterns, positioning, and
+  general champion gameplay do not by themselves require knowledge_topics.
+- Select a knowledge topic when current game-system information would
+  materially affect the answer.
+  
+KNOWLEDGE TOPIC EXAMPLES
+
+"What does a Faelight do?"
+→ knowledge_topics = ["faelights"]
+
+"How do Top role quests work?"
+→ knowledge_topics = ["role_quests"]
+
+"How much is a Tier 2 plate worth?"
+→ knowledge_topics = ["turret_plates"]
+
+"When does Baron spawn?"
+→ knowledge_topics = ["objectives"]
+
+"Why does Jinx have a bounty even though she is 0/0?"
+→ knowledge_topics = ["bounties"]
+
+"Should I stay Top for two Tier 2 plates or rotate to third Dragon?"
+→ knowledge_topics = [
+    "macro",
+    "turret_plates",
+    "objectives",
+    "role_quests"
+]
+
+"Should I stay Top for plates or rotate to Dragon if objective bounties are active?"
+→ knowledge_topics = [
+    "macro",
+    "turret_plates",
+    "objectives",
+    "role_quests",
+    "bounties"
+]
+
+"How far can I push Bot if I have the side Faelight warded?"
+→ knowledge_topics = [
+    "macro",
+    "faelights"
+]
+
+"Should I use Herald Mid 60 seconds before Dragon?"
+→ knowledge_topics = [
+    "macro",
+    "objectives",
+    "turret_plates"
+]
+
+"Should Support roam at level 3?"
+→ knowledge_topics = [
+    "macro",
+    "role_quests"
+]
+
+"How do I play Ahri into Yone?"
+→ knowledge_topics = []
+
+"What is Ahri's current win rate?"
+→ knowledge_topics = []
+
+"Compare Ahri and Syndra's win rates."
+→ knowledge_topics = []
 
 Recent conversation:
 {history_text}
