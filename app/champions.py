@@ -171,5 +171,5 @@ CHAMPIONS = [
     "Ziggs",
     "Zilean",
     "Zoe",
-    "Zyra"
+    "Zyra",
 ]

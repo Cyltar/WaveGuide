@@ -1,5 +1,9 @@
-import type { Conversation } from "@/types/chat";
+"use client";
 
+import { useEffect, useRef } from "react";
+import AccountPanel from "@/components/AccountPanel";
+import Icon from "@/components/Icon";
+import type { Conversation } from "@/types/chat";
 
 type SidebarProps = {
   conversations: Conversation[];
@@ -7,80 +11,77 @@ type SidebarProps = {
   onSelectConversation: (sessionId: string) => void;
   onNewChat: () => void;
   disabled: boolean;
+  userEmail: string;
+  accountDisabled: boolean;
+  onAccountDeleted: () => void;
+  mobile: boolean;
+  open: boolean;
+  onClose: () => void;
 };
 
+export default function Sidebar({ conversations, activeSessionId, onSelectConversation, onNewChat,
+  disabled, userEmail, accountDisabled, onAccountDeleted, mobile, open, onClose }: SidebarProps) {
+  const panel = useRef<HTMLElement>(null);
+  const closeButton = useRef<HTMLButtonElement>(null);
 
-export default function Sidebar({
-  conversations,
-  activeSessionId,
-  onSelectConversation,
-  onNewChat,
-  disabled,
-}: SidebarProps) {
+  useEffect(() => {
+    if (!mobile || !open) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    closeButton.current?.focus();
+    function handleKey(event: KeyboardEvent) {
+      // Native account dialogs manage their own focus and Escape handling above this drawer.
+      if (document.querySelector("dialog[open]")) return;
+      if (event.key === "Escape") { event.preventDefault(); onClose(); }
+      if (event.key !== "Tab") return;
+      const controls = Array.from(panel.current?.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), a[href], [tabindex="0"]') ?? []).filter(node => node.getClientRects().length);
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("keydown", handleKey);
+      if (previousFocus?.getClientRects().length) previousFocus.focus();
+    };
+  }, [mobile, open, onClose]);
+
   return (
-    <aside className="flex h-screen w-72 shrink-0 flex-col border-r border-white/10 bg-[#030816]/80 backdrop-blur-xl">
-      <div className="px-5 pt-6">
-        <h1 className="text-2xl font-bold tracking-tight text-white">
-          Wave
-          <span className="text-blue-400">
-            Guide
-          </span>
-        </h1>
-
-        <p className="mt-1 text-xs text-slate-500">
-          League coaching assistant
-        </p>
-
-        <button
-          onClick={onNewChat}
-          disabled={disabled}
-          className="mt-6 w-full rounded-xl border border-blue-400/20 bg-blue-500/10 px-4 py-3 text-left text-sm font-medium text-blue-100 transition hover:border-blue-400/40 hover:bg-blue-500/15"
-        >
-          + New Chat
-        </button>
-      </div>
-
-      <div className="mt-7 flex min-h-0 flex-1 flex-col px-3">
-        <h2 className="px-2 pb-3 text-sm font-bold text-slate-200">
-          Past Conversations
-        </h2>
-
-        <div className="conversation-scroll flex-1 space-y-1 overflow-y-auto pr-1">
-          {conversations.length === 0 ? (
-            <p className="px-2 py-3 text-sm text-slate-600">
-              No conversations yet.
-            </p>
-          ) : (
-            conversations.map((conversation) => {
-              const active =
-                conversation.sessionId ===
-                activeSessionId;
-
-              return (
-                <button
-                  key={conversation.sessionId}
-                  onClick={() =>
-                    onSelectConversation(
-                      conversation.sessionId
-                    )
-                  }
-                  className={`w-full truncate rounded-xl px-3 py-3 text-left text-sm transition ${
-                    active
-                      ? "border border-blue-400/20 bg-gradient-to-r from-blue-950/80 to-blue-900/30 text-blue-100 shadow-[0_0_24px_rgba(37,99,235,0.08)]"
-                      : "border border-transparent text-slate-400 hover:bg-white/5 hover:text-slate-200"
-                  }`}
-                >
-                  {conversation.title}
-                </button>
-              );
-            })
-          )}
+    <>
+      <button type="button" className={`navigation-backdrop ${open ? "is-open" : ""}`} tabIndex={-1}
+        aria-label="Close navigation" aria-hidden={!mobile || !open} onClick={onClose} />
+      <aside ref={panel} id="navigation" className={`sidebar glass ${open ? "is-open" : ""}`}
+        inert={mobile && !open} role={mobile ? "dialog" : undefined} aria-modal={mobile && open ? true : undefined}
+        aria-label="Navigation">
+        <div className="sidebar-top">
+          <div className="sidebar-brand-row">
+            <div className="brand"><Icon name="wave" className="brand-mark" /><span>WaveGuide</span></div>
+            <button ref={closeButton} type="button" className="icon-button mobile-only" onClick={onClose}
+              aria-label="Close navigation"><Icon name="close" /></button>
+          </div>
+          <button type="button" onClick={onNewChat} disabled={disabled} className="new-chat glass">
+            <Icon name="chat" /><span>New Chat</span><span className="new-chat-plus" aria-hidden="true">+</span>
+          </button>
         </div>
-      </div>
-
-      <div className="border-t border-white/10 px-5 py-4 text-xs text-slate-600">
-        WaveGuide
-      </div>
-    </aside>
+        <nav className="history" aria-label="Chat history">
+          <h2><Icon name="history" />Chat History</h2>
+          <div className="conversation-scroll">
+            {conversations.length === 0 ? (
+              <div className="history-empty"><p>A fresh start.</p><span>Your conversations will appear here.</span></div>
+            ) : conversations.map(conversation => (
+              <button type="button" key={conversation.sessionId} onClick={() => onSelectConversation(conversation.sessionId)}
+                disabled={accountDisabled} className={`conversation ${conversation.sessionId === activeSessionId ? "active" : ""}`}
+                aria-current={conversation.sessionId === activeSessionId ? "page" : undefined} title={conversation.title}>
+                <Icon name="chat" /><span>{conversation.title}</span>
+              </button>
+            ))}
+          </div>
+        </nav>
+        <div className="sidebar-bottom">
+          <AccountPanel email={userEmail} disabled={accountDisabled} onDeleted={onAccountDeleted} />
+        </div>
+      </aside>
+    </>
   );
-}
+}
