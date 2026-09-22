@@ -1,45 +1,29 @@
-type DailyLimitModalProps = {
-  open: boolean;
-  onClose: () => void;
-};
+"use client";
 
+import { useEffect, useRef } from "react";
 
-export default function DailyLimitModal({
-  open,
-  onClose,
-}: DailyLimitModalProps) {
-  if (!open) {
-    return null;
-  }
+type DailyLimitModalProps = { open: boolean; onClose: () => void };
+
+export default function DailyLimitModal({ open, onClose }: DailyLimitModalProps) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    if (open && !dialog.current?.open) dialog.current?.showModal();
+    if (!open && dialog.current?.open) dialog.current?.close();
+  }, [open]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl bg-white p-7 shadow-2xl">
-        <h2 className="text-xl font-bold text-slate-900">
-          Daily limit reached
-        </h2>
-
-        <p className="mt-3 text-sm leading-6 text-slate-600">
-          LoLGPT has reached today&apos;s AI
-          request limit. You can continue using
-          the chatbot when the daily quota resets.
-        </p>
-
-        <p className="mt-3 text-sm text-slate-500">
-          Existing conversations can still be
-          viewed, but new messages and chats are
-          temporarily disabled.
-        </p>
-
-        <div className="mt-6 flex justify-end">
-          <button
-            onClick={onClose}
-            className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-600"
-          >
-            OK
-          </button>
-        </div>
-      </div>
-    </div>
+    <dialog ref={dialog} className="account-dialog" aria-labelledby="daily-limit-title"
+      onKeyDown={event => { if (event.key === "Tab") { event.preventDefault(); event.currentTarget.querySelector("button")?.focus(); } }}
+      onCancel={event => { event.preventDefault(); onClose(); }}
+      onClick={event => { if (event.target === event.currentTarget) onClose(); }}>
+      <section className="account-surface">
+        <h2 id="daily-limit-title" className="text-xl font-semibold">Daily limit reached</h2>
+        <p className="dialog-description">WaveGuide has reached today&apos;s AI request limit.
+          You can continue chatting when the daily quota resets.</p>
+        <p className="dialog-description">Your existing conversations are still available to view.</p>
+        <button type="button" onClick={onClose} className="primary-button">Got it</button>
+      </section>
+    </dialog>
   );
 }
+

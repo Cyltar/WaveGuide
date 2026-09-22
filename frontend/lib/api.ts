@@ -176,3 +176,18 @@ export async function getSession(
 
   return response.json();
 }
+
+export async function deleteAccount(): Promise<void> {
+  const accessToken = await getAccessToken();
+  const response = await fetch(`${API_URL}/account`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!response.ok) {
+    throw new ApiError("Unable to delete your account. Please try again.", response.status, "ACCOUNT_DELETION_FAILED");
+  }
+  const result = await response.json();
+  if (result.deleted !== true) {
+    throw new ApiError("Unable to confirm account deletion. Please try again.", 502, "ACCOUNT_DELETION_FAILED");
+  }
+}

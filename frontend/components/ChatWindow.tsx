@@ -1,161 +1,113 @@
 "use client";
 
-import {
-  FormEvent,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
-
+import { FormEvent, useEffect, useRef, useState } from "react";
 import type { Message } from "@/types/chat";
 import ReactMarkdown from "react-markdown";
+import Icon, { type IconName } from "@/components/Icon";
 
 type ChatWindowProps = {
   messages: Message[];
   loading: boolean;
   disabled: boolean;
   onSendMessage: (message: string) => void;
+  onOpenNavigation: () => void;
+  navigationOpen: boolean;
+  mobile: boolean;
 };
 
+const prompts: { icon: IconName; label: string; prompt: string }[] = [
+  { icon: "chart", label: "Analyze my last 3 games", prompt: "Analyze my last 3 games." },
+  { icon: "search", label: "Review my latest deaths", prompt: "Analyze my most recent game and review my deaths." },
+  { icon: "team", label: "Review my teamfighting", prompt: "Analyze my most recent game and review my teamfighting." },
+  { icon: "build", label: "Help me with my build", prompt: "Help me choose a build for " },
+];
 
-export default function ChatWindow({
-  messages,
-  loading,
-  disabled,
-  onSendMessage,
-}: ChatWindowProps) {
+export default function ChatWindow({ messages, loading, disabled, onSendMessage,
+  onOpenNavigation, navigationOpen, mobile }: ChatWindowProps) {
   const [input, setInput] = useState("");
-
-  const bottomRef =
-    useRef<HTMLDivElement | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const textarea = useRef<HTMLTextAreaElement>(null);
+  const busy = loading || disabled;
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({
-      behavior: "smooth",
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+      block: "end",
     });
   }, [messages, loading]);
 
+  useEffect(() => {
+    if (!textarea.current) return;
+    textarea.current.style.height = "auto";
+    textarea.current.style.height = `${Math.min(textarea.current.scrollHeight, 144)}px`;
+  }, [input, mobile]);
 
-  function handleSubmit(
-    event: FormEvent<HTMLFormElement>
-  ) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
     const trimmed = input.trim();
-
-    if (!trimmed || loading || disabled) {
-      return;
-    }
-
+    if (!trimmed || busy) return;
     onSendMessage(trimmed);
-
     setInput("");
+    if (textarea.current) textarea.current.style.height = "auto";
   }
 
-
   return (
-    <main className="relative flex min-w-0 flex-1 flex-col">
-      <header className="flex h-[72px] items-center justify-end border-b border-white/5 px-7">
+    <main className="chat-main" id="main-chat">
+      <header className="chat-header">
+        <button type="button" className="icon-button glass mobile-only" aria-label="Open navigation"
+          aria-controls="navigation" aria-expanded={navigationOpen} onClick={onOpenNavigation}><Icon name="menu" /></button>
+        <span className="mobile-brand">WaveGuide</span>
+        <span className="header-note">Your personal League coach</span>
       </header>
-
-      <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-6 pb-40 pt-10">
-          {messages.length === 0 ? (
-            <div className="flex flex-1 items-center justify-center">
-              <div className="text-center">
-                <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-blue-400/20 bg-gradient-to-br from-blue-950 to-blue-800/30 shadow-[0_0_45px_rgba(37,99,235,0.12)]">
-                  <span className="text-xl font-bold text-blue-300">
-                    L
-                  </span>
-                </div>
-
-                <h2 className="text-2xl font-semibold text-slate-100">
-                  What can I help you with?
-                </h2>
-
-                <p className="mt-2 text-sm text-slate-500">
-                  Ask about champions, matchups,
-                  laning, macro, or the current meta.
-                </p>
+      <div className="chat-scroll">
+        {messages.length === 0 ? (
+          <section className="welcome" aria-labelledby="welcome-title">
+            <div className="welcome-inner">
+              <span className="eyebrow">A clearer path to your next win</span>
+              <h1 id="welcome-title">Your League Journey,<br />Guided by <span>Data</span></h1>
+              <p className="welcome-description">Get personalized insights, analyze your games, and improve faster<br className="desktop-break" /> with AI-powered coaching.</p>
+              <div className="prompt-grid">
+                {prompts.map(prompt => (
+                  <button type="button" key={prompt.label} className="prompt-card glass" disabled={busy}
+                    onClick={() => { setInput(prompt.prompt); textarea.current?.focus(); }}>
+                    <Icon name={prompt.icon} /><span>{prompt.label}</span>
+                  </button>
+                ))}
               </div>
             </div>
-          ) : (
-            <div className="space-y-8">
-              {messages.map((message, index) => (
-                <div
-                  key={`${message.role}-${index}`}
-                  className={`flex ${
-                    message.role === "user"
-                      ? "justify-end"
-                      : "justify-start"
-                  }`}
-                >
-                  {message.role === "user" ? (
-                    <div className="max-w-[75%] rounded-2xl border border-blue-400/15 bg-blue-950/50 px-4 py-3 text-sm leading-6 text-slate-100">
-                      {message.content}
-                    </div>
-                  ) : (
-                    <div className="prose prose-invert prose-blue max-w-[90%] text-[15px]">
-                      <ReactMarkdown>
-                          {message.content}
-                      </ReactMarkdown>
-                    </div>
-                  )}
-                </div>
-              ))}
-
-              {loading && (
-                <div className="text-sm text-slate-500">
-                  WaveGuide is thinking...
-                </div>
-              )}
-
-              <div ref={bottomRef} />
-            </div>
-          )}
-        </div>
+          </section>
+        ) : (
+          <section className="message-list" aria-label="Conversation">
+            {messages.map((message, index) => (
+              <article key={message.id ?? `${message.role}-${index}`} className={`message message-${message.role}`}>
+                <div className="message-label">{message.role === "assistant" && <Icon name="wave" />}
+                  {message.role === "user" ? "You" : "WaveGuide"}</div>
+                {message.role === "user" ? <div className="user-content">{message.content}</div> :
+                  <div className="assistant-content prose prose-invert prose-blue"><ReactMarkdown>{message.content}</ReactMarkdown></div>}
+              </article>
+            ))}
+            {loading && <div className="thinking" role="status"><span className="thinking-dot" />WaveGuide is thinking…</div>}
+            <div ref={bottomRef} />
+          </section>
+        )}
       </div>
-
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#050c1d] via-[#050c1d]/95 to-transparent px-5 pb-6 pt-12">
-        <form
-          onSubmit={handleSubmit}
-          className="mx-auto flex w-full max-w-3xl items-end gap-3 rounded-2xl border border-blue-300/15 bg-[#0a1428]/90 p-3 shadow-[0_15px_50px_rgba(0,0,0,0.45)] backdrop-blur-xl focus-within:border-blue-400/40"
-        >
-          <textarea
-            value={input}
-            onChange={(event) =>
-              setInput(event.target.value)
-            }
-            disabled={disabled}
-            placeholder= {disabled? "Daily limit reached" : "Ask WaveGuide..."}
-            rows={1}
-            className="max-h-36 min-h-11 flex-1 resize-none bg-transparent px-2 py-2.5 text-sm text-slate-100 outline-none placeholder:text-slate-600"
-            onKeyDown={(event) => {
-              if (
-                event.key === "Enter" &&
-                !event.shiftKey
-              ) {
-                event.preventDefault();
-
-                event.currentTarget.form?.requestSubmit();
+      <footer className="composer-area">
+        <form onSubmit={handleSubmit} className="composer glass">
+          <label htmlFor="chat-input" className="sr-only">Message WaveGuide</label>
+          <textarea ref={textarea} id="chat-input" value={input} disabled={disabled} rows={1}
+            placeholder={disabled ? "Daily limit reached" : mobile ? "Ask anything…" : "Ask anything about your games…"}
+            onChange={event => setInput(event.target.value)}
+            onKeyDown={event => {
+              if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+                event.preventDefault(); event.currentTarget.form?.requestSubmit();
               }
-            }}
-          />
-
-          <button
-            type="submit"
-            disabled={loading || disabled || !input.trim()}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-lg text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-600"
-          >
-            ↑
-          </button>
+            }} />
+          <button type="submit" className="send-button" aria-label="Send message" disabled={busy || !input.trim()}>
+            <Icon name="send" /></button>
         </form>
-
-        <p className="mx-auto mt-2 max-w-3xl text-center text-[11px] text-slate-600">
-          WaveGuide can make mistakes. Check important
-          game information.
-        </p>
-      </div>
+        <p className="composer-note">WaveGuide can make mistakes. Check important game information.</p>
+      </footer>
     </main>
   );
 }
+
