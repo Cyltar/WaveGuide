@@ -12,6 +12,7 @@ type SidebarProps = {
   onNewChat: () => void;
   disabled: boolean;
   userEmail: string;
+  guest?: boolean;
   accountDisabled: boolean;
   onAccountDeleted: () => void;
   mobile: boolean;
@@ -20,7 +21,7 @@ type SidebarProps = {
 };
 
 export default function Sidebar({ conversations, activeSessionId, onSelectConversation, onNewChat,
-  disabled, userEmail, accountDisabled, onAccountDeleted, mobile, open, onClose }: SidebarProps) {
+  disabled, userEmail, guest, accountDisabled, onAccountDeleted, mobile, open, onClose }: SidebarProps) {
   const panel = useRef<HTMLElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
 
@@ -79,9 +80,9 @@ export default function Sidebar({ conversations, activeSessionId, onSelectConver
           </div>
         </nav>
         <div className="sidebar-bottom">
-          <AccountPanel email={userEmail} disabled={accountDisabled} onDeleted={onAccountDeleted} />
+          <>{guest ? <div className="account-surface"><a href="/signup">Create a free account</a> · <a href="/login">Log in</a></div> : <AccountPanel email={userEmail} disabled={accountDisabled} onDeleted={onAccountDeleted} />}</>
         </div>
       </aside>
     </>
   );
-}
+}

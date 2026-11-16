@@ -12,6 +12,8 @@ import ChatWindow from "@/components/ChatWindow";
 
 import DailyLimitModal from "@/components/DailyLimitModal";
 
+import GuestSignupModal from "@/components/GuestSignupModal";
+import {initTrial, guestSessions, guestMessages, guestSend, guestStatus, type Allowance} from "@/lib/trial";
 import Sidebar from "@/components/Sidebar";
 
 
@@ -69,6 +71,12 @@ function getMobileSnapshot() {
 export default function Home() {
 
   const router = useRouter();
+  const [guest,setGuest]=useState(false);
+  const [allowance,setAllowance]=useState<Allowance|null>(null);
+  const [signup,setSignup]=useState(false);
+  const [initError,setInitError]=useState("");
+  const [attempt,retryInit]=useState(0);
+  const blocked=guest && (!allowance || allowance.signup_required);
 
   const mobile = useSyncExternalStore(subscribeMobile, getMobileSnapshot, () => false);
 
@@ -178,26 +186,25 @@ export default function Home() {
 
 
 
-      if (error || user === null) {
-
-        console.error(
-
-          "Failed to get user:",
-
-          error?.message
-
-        );
-
-
-
-        router.replace("/login");
-
+      if (!user) {
+        if (error && error.name !== "AuthSessionMissingError") {
+          setInitError("Unable to verify your account. Please retry."); return;
+        }
+        setGuest(true);
+        try {
+          const status=await initTrial();
+          const {sessions}=await guestSessions();
+          const latest=sessions[0]?.id;
+          if(latest) {
+            const saved=await guestMessages(latest);
+            setSessionId(latest); setMessages(saved.messages);
+          }
+          setConversations(sessions.map(s=>({sessionId:s.id,title:s.title})));
+          setAllowance(status); setSignup(status.signup_required); setCheckingAuth(false);
+        } catch(e) {setInitError(e instanceof Error?e.message:"Unable to open trial.");}
         return;
-
       }
-
-
-
+      setGuest(false);
       setUserEmail(
 
         user.email ?? ""
@@ -264,7 +271,7 @@ export default function Home() {
 
     initializePage();
 
-  }, [router]);
+  }, [router,attempt]);
 
 
 
@@ -276,7 +283,7 @@ export default function Home() {
 
       const response =
 
-        await getSessions();
+        await (guest ? guestSessions() : getSessions());
 
 
 
@@ -324,6 +331,7 @@ export default function Home() {
 
   function handleNewChat() {
 
+    if (blocked) { setSignup(Boolean(allowance?.signup_required)); return; }
     if (dailyLimitReached) {
 
       setShowLimitModal(true);
@@ -350,6 +358,7 @@ export default function Home() {
 
   ) {
 
+    if (checkingAuth || blocked) {setSignup(Boolean(allowance?.signup_required));return;}
     if (
 
       loading
@@ -404,20 +413,11 @@ export default function Home() {
 
     try {
 
-      const response =
-
-        await sendMessage(
-
-          message,
-
-          sessionId
-
-        );
-
-
-
-
-
+      const response = guest ? await guestSend(message,sessionId) : await sendMessage(message,sessionId);
+      if ("guest" in response) {
+        const status=response.guest as Allowance;
+        setAllowance(status); setSignup(status.signup_required);
+      }
       const assistantMessage:
 
         Message = {
@@ -459,6 +459,17 @@ export default function Home() {
       }
 
     } catch (error) {
+      if(guest) {
+        // Synchronize a final response after lost delivery or another tab's send.
+        try {
+          const status=await guestStatus(); setAllowance(status); setSignup(status.signup_required);
+          if(status.signup_required) {
+            const {sessions}=await guestSessions(); const latest=sessionId || sessions[0]?.id;
+            if(latest) { const saved=await guestMessages(latest); setMessages(saved.messages); setSessionId(latest); }
+            return;
+          }
+        } catch { /* Preserve the original request error. */ }
+      }
 
       if (
 
@@ -556,7 +567,7 @@ export default function Home() {
 
       const response =
 
-        await getSession(
+        await (guest ? guestMessages : getSession)(
 
           selectedSessionId
 
@@ -616,20 +627,6 @@ export default function Home() {
 
 
 
-  if (checkingAuth) {
-
-    return (
-
-      <main className="auth-page" aria-label="Loading WaveGuide"><p role="status">Opening WaveGuide…</p></main>
-
-    );
-
-  }
-
-
-
-
-
   return (
 
     <div className="workspace">
@@ -657,6 +654,7 @@ export default function Home() {
         disabled={dailyLimitReached || loading}
 
         userEmail={userEmail}
+        guest={guest || checkingAuth}
 
         accountDisabled={loading}
 
@@ -684,13 +682,15 @@ export default function Home() {
 
       <div className="chat-canvas" inert={mobile && navigationOpen}>
 
+      {initError && <div role="alert" className="account-surface">{initError} <button onClick={()=>{setInitError("");retryInit(n=>n+1);}}>Retry</button> · <a href="/login">Log in</a></div>}
       <ChatWindow
 
         messages={messages}
 
         loading={loading}
 
-        disabled={dailyLimitReached}
+        disabled={dailyLimitReached || blocked || checkingAuth}
+        guestLabel={checkingAuth ? "Opening WaveGuide…" : guest && allowance ? `${allowance.messages_remaining} free message${allowance.messages_remaining===1?"":"s"} remaining` : undefined}
 
         onOpenNavigation={() => setNavigationOpen(true)}
 
@@ -711,6 +711,7 @@ export default function Home() {
 
 
 
+      <GuestSignupModal open={signup} onClose={()=>setSignup(false)} />
       <DailyLimitModal
 
         open={showLimitModal}
