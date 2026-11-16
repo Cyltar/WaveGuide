@@ -597,7 +597,7 @@ Do not dump raw analysis JSON.
 Turn the strongest evidence into useful coaching.
 
 """
-    response = client.models.generate_content(model="gemini-3.5-flash", contents=prompt)
+    response = client.models.generate_content(model="gemini-3.5-flash", contents=prompt, config={"max_output_tokens": 4096})
 
     return response.text
 

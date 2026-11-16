@@ -7,7 +7,7 @@ def get_latest_version() -> str:
     """
     Fetch the latest Data Dragon version.
     """
-    response = requests.get(VERSIONS_URL)
+    response = requests.get(VERSIONS_URL, timeout=(5, 15))
     response.raise_for_status()
 
     versions = response.json()
@@ -24,7 +24,7 @@ def fetch_champion(champion_name: str) -> dict:
     Fetch champion data from Riot Data Dragon.
     """
     champion_name = champion_name.replace(" ", "").replace("'", "")
-    response = requests.get(f"{BASE_URL}/{champion_name}.json")
+    response = requests.get(f"{BASE_URL}/{champion_name}.json", timeout=(5, 15))
     response.raise_for_status()
 
     data = response.json()

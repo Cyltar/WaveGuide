@@ -268,6 +268,10 @@ def record_successful_ai_request(user_id: str) -> None:
     """
     Record a successful AI request for daily usage tracking.
     """
+    from app.guest_trial import GuestRun
+    if isinstance(user_id, GuestRun):
+        user_id.charge = True
+        return
     supabase.rpc("increment_daily_ai_request_count", {"p_user_id": user_id}).execute()
 
 

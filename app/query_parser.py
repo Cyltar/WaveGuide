@@ -1362,7 +1362,7 @@ Only extract intent; Python will select the actual match. Do not decide which ma
     response = client.models.generate_content(
         model="gemini-3.5-flash",
         contents=prompt,
-        config={"response_mime_type": "application/json", "response_schema": QueryContext},
+        config={"max_output_tokens": 2048, "response_mime_type": "application/json", "response_schema": QueryContext},
     )
     context = response.parsed
 
