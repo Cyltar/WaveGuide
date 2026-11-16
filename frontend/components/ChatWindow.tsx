@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import type { Message } from "@/types/chat";
 import ReactMarkdown from "react-markdown";
+import Link from "next/link";
 import Icon, { type IconName } from "@/components/Icon";
 
 type ChatWindowProps = {
@@ -107,7 +108,12 @@ export default function ChatWindow({ messages, loading, disabled, guestLabel, on
           <button type="submit" className="send-button" aria-label="Send message" disabled={busy || !input.trim()}>
             <Icon name="send" /></button>
         </form>
-        <p className="composer-note">WaveGuide can make mistakes. Check important game information.</p>
+        <div className="chat-legal">
+          <p>WaveGuide can make mistakes. Check important game information.</p>
+          <p><Link className="privacy-link" href="/privacy">Privacy Policy</Link> <span aria-hidden="true">&middot;</span> Independent fan project</p>
+          <p>{"WaveGuide isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc."}</p>
+          <p>{`WaveGuide was created under Riot Games' "Legal Jibber Jabber" policy using assets owned by Riot Games. Riot Games does not endorse or sponsor this project.`}</p>
+        </div>
       </footer>
     </main>
   );
