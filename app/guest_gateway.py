@@ -65,6 +65,31 @@ def mount_guest(app, authenticated, legacy_chat, model):
             raise HTTPException(409,'Use your authenticated account.')
         return trusted_ip(request)
 
+    @app.post('/guest/claim')
+    def claim(request:Request,response:Response):
+        """Transfer history only when both independent credentials have been validated."""
+        if not enabled():
+            raise HTTPException(404,'Not found.')
+        trusted_ip(request)
+        auth=authenticated(request.headers.get('authorization'))
+        response.headers['Cache-Control']='no-store'
+        if not request.cookies.get(COOKIE):
+            return {'claimed':False}
+        from app.supabase_client import supabase
+        token=guest_hash(request)
+        try:
+            result=supabase.rpc('waveguide_claim_guest',{'token':token,'account_id':auth.user_id}).execute().data
+        except Exception:
+            reject('CHAT_FAILED')
+        if not isinstance(result,dict):
+            reject('CHAT_FAILED')
+        if 'error' in result:
+            reject(result['error'],**{k:v for k,v in result.items() if k=='retry'})
+        if result.get('claimed') is not True:
+            reject('CHAT_FAILED')
+        response.delete_cookie(COOKIE,path='/',httponly=True,secure=True,samesite='lax')
+        return result
+
     @app.get('/guest/status')
     def status(request:Request,response:Response):
         guest_identity(request)

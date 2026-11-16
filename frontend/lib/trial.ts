@@ -27,3 +27,5 @@ export async function guestSend(message:string,session_id:string|null) {
   sessionStorage.removeItem("wg-pending-submission");
   return response;
 }
+
+export const claimTrial=()=>call<{claimed:boolean;session_id?:string}>("guest/claim",{});

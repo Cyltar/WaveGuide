@@ -12,6 +12,8 @@ async function forward(req: NextRequest, ctx: {params: Promise<{path:string[]}>}
   if (!allowed.test(route)) return new Response(null,{status:404});
   if (req.method === "POST" && req.headers.get("origin") !== req.nextUrl.origin)
     return new Response(null,{status:403});
+  if(route === "guest/claim" && !req.cookies.has("waveguide_guest"))
+    return NextResponse.json({claimed:false},{headers:{"cache-control":"private, no-store"}});
   const origin = process.env.WAVEGUIDE_BACKEND_URL, secret = process.env.INTERNAL_PROXY_SECRET;
   const ip = process.env.VERCEL === "1" ? req.headers.get("x-vercel-forwarded-for") :
     process.env.NODE_ENV === "development" ? "127.0.0.1" : null;

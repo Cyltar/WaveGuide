@@ -78,3 +78,23 @@ class GatewayTests(unittest.TestCase):
         job=self.job.call_args.args[0]
         self.assertTrue(job['guest'])
         self.assertEqual(job['body']['message'],self.body['message'])
+
+    def test_claim_requires_bearer_and_preserves_cookie_on_failure(self):
+        import types
+        self.api.cookies.set(COOKIE,'a'*43)
+        client=Mock()
+        storage=types.SimpleNamespace(supabase=client)
+        with patch.dict(sys.modules,{'app.supabase_client':storage}):
+            self.assertEqual(self.api.post('/guest/claim').status_code,401)
+            client.rpc.assert_not_called()
+            self.auth.side_effect=None
+            self.auth.return_value=types.SimpleNamespace(user_id='verified-id')
+            client.rpc.return_value.execute.return_value.data={'error':'REQUEST_IN_PROGRESS','retry':2}
+            response=self.api.post('/guest/claim',headers={'Authorization':'Bearer signed'})
+            self.assertEqual(response.status_code,409)
+            self.assertNotIn('set-cookie',response.headers)
+            client.rpc.return_value.execute.return_value.data={'claimed':True}
+            result=self.api.post('/guest/claim',headers={'Authorization':'Bearer signed'},json={'user_id':'forged'})
+            self.assertEqual(result.status_code,200)
+            self.assertIn('Max-Age=0',result.headers['set-cookie'])
+            self.assertEqual(client.rpc.call_args.args[1]['account_id'],'verified-id')

@@ -13,7 +13,7 @@ import ChatWindow from "@/components/ChatWindow";
 import DailyLimitModal from "@/components/DailyLimitModal";
 
 import GuestSignupModal from "@/components/GuestSignupModal";
-import {initTrial, guestSessions, guestMessages, guestSend, guestStatus, type Allowance} from "@/lib/trial";
+import {claimTrial, initTrial, guestSessions, guestMessages, guestSend, guestStatus, type Allowance} from "@/lib/trial";
 import Sidebar from "@/components/Sidebar";
 
 
@@ -205,6 +205,13 @@ export default function Home() {
         return;
       }
       setGuest(false);
+      let claimedSession:string|undefined;
+      try {
+        const result=await claimTrial();
+        claimedSession=result.session_id;
+      } catch {
+        setInitError("Your account is signed in, but guest history could not be transferred. Retry to recover it.");
+      }
       setUserEmail(
 
         user.email ?? ""
@@ -241,6 +248,10 @@ export default function Home() {
 
 
 
+        if(claimedSession) {
+          const saved=await getSession(claimedSession);
+          setSessionId(claimedSession); setMessages(saved.messages);
+        }
         setConversations(
 
           loadedConversations
