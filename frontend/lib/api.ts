@@ -116,6 +116,7 @@ export async function sendMessage(
       body: JSON.stringify({
         message,
         session_id: sessionId,
+        request_id: crypto.randomUUID(),
       }),
     }
   );

@@ -7,6 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from app.auth import AuthenticatedUser, get_current_user
 from app.database import *
+from app.guest_trial import GuestRun
+from app.guest_gateway import mount_guest
 from app.errors import handle_external_error
 from app.gemini import ask_gemini
 from app.knowledge.knowledge_loader import load_relevant_knowledge
@@ -90,6 +92,10 @@ def save_and_return_chat_response(user_client, user_id: str, session_id: str | N
     """
     Save the conversation messages and return the chat response.
     """
+    if isinstance(user_client, GuestRun):
+        user_client.context = used_context
+        return ChatResponse(answer=answer, session_id=user_client.conversation, **(
+            {"structured": used_context["structured"]} if used_context and used_context.get("structured") else {}))
     if session_id is None:
         session_id = create_chat_session(client=user_client, user_id=user_id, title=user_message[:50])
     save_chat_message(client=user_client, session_id=session_id, role="user", content=user_message)
@@ -325,6 +331,8 @@ def resolve_player_riot_account(context, user_client, user_id: str, history: lis
 
     if temporary_account is not None:
         return temporary_account
+    if isinstance(user_client, GuestRun):
+        return None
     linked_account = get_riot_account(user_client, user_id)
 
     if linked_account is None:
@@ -427,7 +435,6 @@ def multi_game_analysis_has_no_games(context, player_analysis: dict) -> bool:
 # =========================================================
 
 
-@app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest, auth: AuthenticatedUser = Depends(get_current_user)):
     """
     Answer a chat request using the relevant context and save the conversation.
@@ -435,19 +442,23 @@ def chat(request: ChatRequest, auth: AuthenticatedUser = Depends(get_current_use
     start_time = time.perf_counter()
 
     try:
-        user_id = auth.user_id
-
-        check_daily_ai_request_limit(user_id)
-
-        user_client = create_user_client(auth.access_token)
-        session_id = request.session_id
-
-        if session_id is not None:
-            if not user_owns_session(user_client, session_id):
-                raise HTTPException(status_code=404, detail=("Conversation not found."))
-            history = get_chat_history(user_client, session_id)
+        if isinstance(auth, GuestRun):
+            user_id = user_client = auth
+            session_id, history = auth.conversation, auth.history
         else:
-            history = []
+            user_id = auth.user_id
+
+            check_daily_ai_request_limit(user_id)
+
+            user_client = create_user_client(auth.access_token)
+            session_id = request.session_id
+
+            if session_id is not None:
+                if not user_owns_session(user_client, session_id):
+                    raise HTTPException(status_code=404, detail=("Conversation not found."))
+                history = get_chat_history(user_client, session_id)
+            else:
+                history = []
         # -------------------------------------------------
         # Query parsing
         # -------------------------------------------------
@@ -807,3 +818,6 @@ def delete_account(auth: AuthenticatedUser = Depends(get_current_user)):
             detail={"code": "ACCOUNT_DELETION_FAILED", "message": "Unable to delete your account. Please try again."},
         ) from None
     return {"deleted": True}
+
+
+mount_guest(app, get_current_user, chat, ChatRequest)

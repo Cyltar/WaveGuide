@@ -1,6 +1,7 @@
 import re
 from typing import Literal
 
+from app.guest_trial import bounded_prompt
 from google import genai
 from pydantic import BaseModel, Field
 
@@ -48,7 +49,7 @@ class QueryContext(BaseModel):
     player_analysis: PlayerAnalysisRequest = Field(default_factory=PlayerAnalysisRequest)
 
 
-client = genai.Client()
+client = genai.Client(http_options={"timeout": 60000, "retry_options": {"attempts": 1}})
 
 
 def champion_mentions(text: str) -> list[str]:
@@ -1361,8 +1362,8 @@ Only extract intent; Python will select the actual match. Do not decide which ma
 """
     response = client.models.generate_content(
         model="gemini-3.5-flash",
-        contents=prompt,
-        config={"response_mime_type": "application/json", "response_schema": QueryContext},
+        contents=bounded_prompt(prompt),
+        config={"max_output_tokens": 2048, "response_mime_type": "application/json", "response_schema": QueryContext},
     )
     context = response.parsed
 

@@ -9,6 +9,7 @@ type ChatWindowProps = {
   messages: Message[];
   loading: boolean;
   disabled: boolean;
+  guestLabel?: string;
   onSendMessage: (message: string) => void;
   onOpenNavigation: () => void;
   navigationOpen: boolean;
@@ -22,7 +23,7 @@ const prompts: { icon: IconName; label: string; prompt: string }[] = [
   { icon: "build", label: "Help me with my build", prompt: "Help me choose a build for " },
 ];
 
-export default function ChatWindow({ messages, loading, disabled, onSendMessage,
+export default function ChatWindow({ messages, loading, disabled, guestLabel, onSendMessage,
   onOpenNavigation, navigationOpen, mobile }: ChatWindowProps) {
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -92,10 +93,11 @@ export default function ChatWindow({ messages, loading, disabled, onSendMessage,
         )}
       </div>
       <footer className="composer-area">
+        <span role="status" className="text-xs text-sky-200">{guestLabel}</span>
         <form onSubmit={handleSubmit} className="composer glass">
           <label htmlFor="chat-input" className="sr-only">Message WaveGuide</label>
           <textarea ref={textarea} id="chat-input" value={input} disabled={disabled} rows={1}
-            placeholder={disabled ? "Daily limit reached" : mobile ? "Ask anything…" : "Ask anything about your games…"}
+            placeholder={disabled ? (guestLabel || "Daily limit reached") : mobile ? "Ask anything…" : "Ask anything about your games…"}
             onChange={event => setInput(event.target.value)}
             onKeyDown={event => {
               if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
