@@ -17,6 +17,13 @@ type ChatWindowProps = {
   mobile: boolean;
 };
 
+const developerNotice = "WaveGuide isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.";
+const fanNotice = `WaveGuide was created under Riot Games' "Legal Jibber Jabber" policy using assets owned by Riot Games. Riot Games does not endorse or sponsor this project.`;
+
+function RiotNotices() {
+  return <p className="riot-notices">{developerNotice} {fanNotice}</p>;
+}
+
 const prompts: { icon: IconName; label: string; prompt: string }[] = [
   { icon: "chart", label: "Analyze my last 3 games", prompt: "Analyze my last 3 games." },
   { icon: "search", label: "Review my latest deaths", prompt: "Analyze my most recent game and review my deaths." },
@@ -29,6 +36,8 @@ export default function ChatWindow({ messages, loading, disabled, guestLabel, on
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const textarea = useRef<HTMLTextAreaElement>(null);
+  const legalDialog = useRef<HTMLDialogElement>(null);
+  const legalTrigger = useRef<HTMLButtonElement>(null);
   const busy = loading || disabled;
 
   useEffect(() => {
@@ -59,9 +68,9 @@ export default function ChatWindow({ messages, loading, disabled, guestLabel, on
         <button type="button" className="icon-button glass mobile-only" aria-label="Open navigation"
           aria-controls="navigation" aria-expanded={navigationOpen} onClick={onOpenNavigation}><Icon name="menu" /></button>
         <span className="mobile-brand">WaveGuide</span>
-        <span className="header-note">Your personal League coach</span>
       </header>
-      <div className="chat-scroll">
+      <div className={messages.length ? "chat-scroll" : "chat-scroll chat-home"}>
+        {messages.length > 0 && <RiotNotices />}
         {messages.length === 0 ? (
           <section className="welcome" aria-labelledby="welcome-title">
             <div className="welcome-inner">
@@ -92,6 +101,7 @@ export default function ChatWindow({ messages, loading, disabled, guestLabel, on
             <div ref={bottomRef} />
           </section>
         )}
+        {messages.length === 0 && <RiotNotices />}
       </div>
       <footer className="composer-area">
         <span role="status" className="text-xs text-sky-200">{guestLabel}</span>
@@ -108,13 +118,40 @@ export default function ChatWindow({ messages, loading, disabled, guestLabel, on
           <button type="submit" className="send-button" aria-label="Send message" disabled={busy || !input.trim()}>
             <Icon name="send" /></button>
         </form>
-        <div className="chat-legal">
-          <p>WaveGuide can make mistakes. Check important game information.</p>
-          <p><Link className="privacy-link" href="/privacy">Privacy Policy</Link> <span aria-hidden="true">&middot;</span> Independent fan project</p>
-          <p>{"WaveGuide isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc."}</p>
-          <p>{`WaveGuide was created under Riot Games' "Legal Jibber Jabber" policy using assets owned by Riot Games. Riot Games does not endorse or sponsor this project.`}</p>
-        </div>
+        <p className="chat-legal">
+          <span>WaveGuide can make mistakes.</span>{" "}
+          <span className="legal-action"><span aria-hidden="true">&middot; </span><Link className="privacy-link" href="/privacy">Privacy Policy</Link></span>{" "}
+          <span className="legal-action"><span aria-hidden="true">&middot; </span><button type="button" className="privacy-link"
+            aria-haspopup="dialog" ref={legalTrigger} onClick={() => legalDialog.current?.showModal()}>Independent fan project</button></span>
+        </p>
       </footer>
+      <dialog ref={legalDialog} className="account-dialog legal-dialog" aria-labelledby="legal-title"
+        onClose={() => legalTrigger.current?.focus()}
+        onClick={event => { if (event.target === event.currentTarget) event.currentTarget.close(); }}
+        onKeyDown={event => {
+          if (event.key !== "Tab") return;
+          const first = event.currentTarget.querySelector("button");
+          const last = event.currentTarget.querySelector("a");
+          if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last?.focus();
+          } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first?.focus();
+          }
+        }}>
+        <section className="account-surface">
+          <header className="flex items-center justify-between gap-3">
+            <h2 id="legal-title" className="text-xl font-semibold">Independent Fan Project</h2>
+            <button type="button" className="account-close" aria-label="Close project notices"
+              onClick={() => legalDialog.current?.close()}>&times;</button>
+          </header>
+          <p>WaveGuide is an independent League of Legends coaching project.</p>
+          <p>{developerNotice}</p>
+          <p>{fanNotice}</p>
+          <a className="privacy-link" href="https://www.riotgames.com/en/legal">Riot Games Legal Jibber Jabber policy</a>
+        </section>
+      </dialog>
     </main>
   );
 }
