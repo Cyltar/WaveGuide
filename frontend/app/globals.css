@@ -211,4 +211,21 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
-}
+}
+
+.privacy-link { color: #a8d8ff; text-decoration: underline; text-underline-offset: .2em; }
+.privacy-link:hover { color: white; }
+.chat-legal { max-width: 860px; margin: 9px auto 0; text-align: center; color: var(--text-secondary); font-size: 12px; line-height: 1.4; }
+.chat-legal p + p { margin-top: 4px; }
+.chat-legal span { margin-inline: 4px; }
+.auth-privacy { text-align: center; font-size: .875rem; margin-top: 1rem; }
+.privacy-page { min-height: 100dvh; padding: clamp(14px, 5vw, 72px); background: radial-gradient(ellipse at top right, #11355c, transparent 55%), var(--bg-primary); }
+.privacy-card { max-width: 76ch; margin: auto; border-radius: 20px; padding: clamp(20px, 5vw, 52px); color: var(--text-secondary); line-height: 1.7; }
+.privacy-card h1, .privacy-card h2 { color: var(--text-primary); line-height: 1.2; font-weight: 600; }
+.privacy-card h1 { margin-top: 1em; font-size: clamp(2rem, 5vw, 3rem); }
+.privacy-card h2 { margin-top: 1.65em; font-size: 1.25rem; }
+.privacy-card p { margin-top: .65em; }
+@media (max-height: 560px) {
+  .chat-main { overflow-y: auto; }
+  .chat-scroll { min-height: 9rem; }
+}

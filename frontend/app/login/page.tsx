@@ -123,6 +123,7 @@ export default function LoginPage() {
           or affiliated with Riot Games. Riot Games and related properties
           are trademarks of Riot Games, Inc.
         </p>
+        <p className="auth-privacy"><Link className="privacy-link" href="/privacy">Privacy Policy</Link></p>
       </div>
     </main>
   );

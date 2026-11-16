@@ -17,6 +17,7 @@ export default function GuestSignupModal({open,onClose}:{open:boolean;onClose:()
       <Link className="primary-button" href="/signup">Create a free account</Link>
       <p className="dialog-description">Already have an account? <Link href="/login">Log in</Link></p>
       <button type="button" onClick={onClose} className="secondary-button">Back to conversation</button>
+      <p className="auth-privacy"><Link className="privacy-link" href="/privacy">Privacy Policy</Link></p>
     </section>
   </dialog>;
 }
