@@ -4,6 +4,7 @@
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
+import LoadingScreen from "@/components/LoadingScreen";
 import { useRouter } from "next/navigation";
 
 
@@ -638,8 +639,9 @@ export default function Home() {
 
 
 
-  return (
+  if (checkingAuth && !initError) return <LoadingScreen />;
 
+  return (
     <div className="workspace">
 
       <Sidebar

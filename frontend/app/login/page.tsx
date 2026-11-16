@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import Icon from "@/components/Icon";
+import LoadingScreen from "@/components/LoadingScreen";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -27,9 +28,8 @@ export default function LoginPage() {
       password,
     });
 
-    setLoading(false);
-
     if (error) {
+      setLoading(false);
       if (error.message.toLowerCase().includes("email not confirmed")) {
         setErrorMessage("Please verify your email before signing in.");
       }
@@ -42,6 +42,8 @@ export default function LoginPage() {
     router.push("/");
     router.refresh();
   }
+
+  if (loading) return <LoadingScreen />;
 
   return (
     <main className="auth-page">
