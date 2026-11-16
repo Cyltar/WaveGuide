@@ -1,12 +1,13 @@
 import json
 import os
 
+from app.guest_trial import bounded_prompt
 from google import genai
 
 from app.prompts import SYSTEM_PROMPT
 
 
-client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+client = genai.Client(api_key=os.environ["GEMINI_API_KEY"], http_options={"timeout": 60000, "retry_options": {"attempts": 1}})
 
 
 def format_json_context(data: dict | None, empty_message: str) -> str:
@@ -597,7 +598,7 @@ Do not dump raw analysis JSON.
 Turn the strongest evidence into useful coaching.
 
 """
-    response = client.models.generate_content(model="gemini-3.5-flash", contents=prompt, config={"max_output_tokens": 4096})
+    response = client.models.generate_content(model="gemini-3.5-flash", contents=bounded_prompt(prompt), config={"max_output_tokens": 4096})
 
     return response.text
 

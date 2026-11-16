@@ -1,6 +1,7 @@
 """Guest trial protocol shared by the HTTP gateway and isolated chat worker."""
 from dataclasses import dataclass
 from hashlib import sha256
+from datetime import datetime, timezone
 import hmac
 import ipaddress
 import os
@@ -88,7 +89,7 @@ def trusted_ip(request):
             address=address.ipv4_mapped
     except ValueError:
         raise HTTPException(403,'Invalid proxy address.')
-    return hmac.new(salt.encode(),address.packed,'sha256').hexdigest()
+    return hmac.new(salt.encode(),datetime.now(timezone.utc).date().isoformat().encode()+b':'+address.packed,'sha256').hexdigest()
 
 
 def uuid_string(value):
@@ -97,3 +98,10 @@ def uuid_string(value):
         return str(UUID(str(value)))
     except (ValueError,TypeError):
         raise HTTPException(422,'Expected a UUID.')
+
+
+def bounded_prompt(text: str) -> str:
+    """Refuse oversized server-assembled evidence without silently dropping requested games."""
+    if len(text)>int(os.getenv('WG_MAX_PROMPT_CHARS','750000')):
+        raise HTTPException(413,{'code':'CONTEXT_TOO_LARGE','message':'This analysis is too large. Try a narrower question.'})
+    return text

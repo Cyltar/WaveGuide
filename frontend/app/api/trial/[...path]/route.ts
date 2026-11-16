@@ -10,7 +10,11 @@ async function forward(req: NextRequest, ctx: {params: Promise<{path:string[]}>}
   const allowed = req.method === "GET" ? /^guest\/(?:status|sessions(?:\/[0-9a-f-]{36})?)$/ :
     /^(?:chat|guest\/(?:session|claim))$/;
   if (!allowed.test(route)) return new Response(null,{status:404});
-  if (req.method === "POST" && req.headers.get("origin") !== req.nextUrl.origin)
+  const browserOrigin = req.headers.get("origin");
+  // Next can normalize the internal URL host. Compare against the actual inbound Host authority.
+  const sameOrigin = browserOrigin === req.nextUrl.origin ||
+    browserOrigin === req.nextUrl.protocol + "//" + req.headers.get("host");
+  if (req.method === "POST" && !sameOrigin)
     return new Response(null,{status:403});
   if(route === "guest/claim" && !req.cookies.has("waveguide_guest"))
     return NextResponse.json({claimed:false},{headers:{"cache-control":"private, no-store"}});
@@ -18,6 +22,8 @@ async function forward(req: NextRequest, ctx: {params: Promise<{path:string[]}>}
   const ip = process.env.VERCEL === "1" ? req.headers.get("x-vercel-forwarded-for") :
     process.env.NODE_ENV === "development" ? "127.0.0.1" : null;
   if (!origin || !secret || secret.length < 32 || !ip || !isIP(ip)) return new Response(null,{status:503});
+  if (process.env.NODE_ENV !== "development" && new URL(origin).protocol !== "https:")
+    return new Response(null,{status:503});
   const headers = new Headers({"x-waveguide-ip":ip,"x-waveguide-proxy":secret,"content-type":"application/json"});
   const cookie=req.cookies.get("waveguide_guest")?.value;
   if (cookie && /^[a-zA-Z0-9_-]{43}$/.test(cookie)) headers.set("cookie", "waveguide_guest="+cookie);
@@ -48,3 +54,4 @@ async function forward(req: NextRequest, ctx: {params: Promise<{path:string[]}>}
   } catch {return NextResponse.json({detail:{code:"CHAT_FAILED",message:"Connection interrupted. Retry the same message."}},{status:503});}
 }
 export {forward as GET,forward as POST};
+

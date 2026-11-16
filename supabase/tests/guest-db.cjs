@@ -51,6 +51,16 @@ const { randomUUID } = require('node:crypto');
    assert.equal((await db.query("select has_function_privilege($1,'public.waveguide_trial(text,jsonb)','execute') p",[role])).rows[0].p,false);
    assert.equal((await db.query("select has_schema_privilege($1,'wg_trial','usage') p",[role])).rows[0].p,false);
  }
+ // Move the recorded window into the past (without changing the database wall clock).
+ await db.query("update wg_trial.windows set starts=starts-86400,expires_at=now()-interval '2 days' where bucket='ip_attempt'");
+ assert.equal((await call('admit',req({hour_limit:1}))).error,'GUEST_LIMIT_REACHED');
+ const next=await call('admit',req({hour_limit:1}));
+ assert.equal(next.error,'IP_RATE_LIMITED'); assert.ok(next.retry>0 && next.retry<=3600);
+ await db.query("update wg_trial.sessions set expires_at=now()-interval '1 day' where token_hash=$1",[b.token_hash]);
+ await call('cleanup',{});
+ assert.equal((await call('status',b)).error,'INVALID_GUEST_SESSION');
+ assert.equal((await call('status',g)).messages_used,5);
+ assert.equal((await db.query("select count(*)::int n from wg_trial.windows where expires_at<now()-interval '1 day'")).rows[0].n,0);
  console.log('PASS: real SQL admission, leases, quota, replay, ownership, rate windows and grants.');
  } finally {await db.close();}
 })().catch(e=>{console.error(e);process.exitCode=1});

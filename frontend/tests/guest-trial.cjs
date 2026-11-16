@@ -42,6 +42,34 @@ const assert=require("node:assert/strict");
  await page.reload();await modal.waitFor();await page.keyboard.press("Escape");
  await page.getByText("Coaching answer 5",{exact:true}).waitFor();
  assert.equal(await input.isDisabled(),true);
+ // Verified login returns to the same chat origin; claim completes before account history loads.
+ const user={id:"00000000-0000-4000-8000-000000000099",aud:"authenticated",role:"authenticated",
+   email:"guest@example.test",app_metadata:{provider:"email",providers:["email"]},user_metadata:{},created_at:"2026-01-01T00:00:00Z"};
+ const exp=Math.floor(Date.now()/1000)+3600;
+ const token=[Buffer.from(JSON.stringify({alg:"HS256",typ:"JWT"})).toString("base64url"),
+   Buffer.from(JSON.stringify({sub:user.id,aud:"authenticated",exp})).toString("base64url"),"test-signature"].join(".");
+ await page.route("**/auth/v1/**",route=>route.fulfill({contentType:"application/json",headers:{"access-control-allow-origin":"*",
+   "access-control-allow-headers":"*"},body:JSON.stringify(route.request().url().includes("/token")?
+   {access_token:token,refresh_token:"offline",token_type:"bearer",expires_in:3600,expires_at:exp,user}:user)}));
+ let claimed=false;
+ await page.route("**/api/trial/guest/claim",r=>{claimed=true;return r.fulfill({json:{claimed:true,session_id:id}});});
+ await page.route("**/sessions",r=>r.fulfill({json:{sessions:[{id,title:"Claimed conversation"}]}}));
+ await page.route("**/sessions/"+id,r=>r.fulfill({json:{messages}}));
+ await page.reload();await modal.waitFor();
+ await modal.getByRole("link",{name:"Create a free account"}).click();
+ await page.getByLabel("Email",{exact:true}).fill(user.email);
+ await page.getByLabel("Password",{exact:true}).fill("offline-only");
+ await page.getByLabel("Confirm password",{exact:true}).fill("offline-only");
+ await page.locator("form button[type=submit]").click();
+ await page.getByText(/Account created. Check your email/).waitFor();
+ assert.equal(claimed,false);
+ await page.goto(base);await modal.waitFor();
+ await modal.getByRole("link",{name:"Log in"}).click();
+ await page.getByLabel("Email",{exact:true}).fill(user.email);
+ await page.getByLabel("Password",{exact:true}).fill("offline-only");
+ await page.getByRole("button",{name:"Sign in",exact:true}).click();
+ await page.getByText("Coaching answer 5",{exact:true}).waitFor();
+ assert.ok(claimed);assert.equal(await page.getByLabel("Message WaveGuide").isEnabled(),true);
  console.log("PASS: guest landing, all five responses, failure, modal links, dismissal, restored history and 320px layout");
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1});

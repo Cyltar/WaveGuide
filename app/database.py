@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from fastapi import HTTPException
 from supabase import Client
 
-from app.riot import VERSION, fetch_champion
+from app.riot import get_latest_version, fetch_champion
 from app.stats import get_champion_stats
 from app.supabase_client import supabase
 
@@ -37,7 +37,7 @@ def save_champion(champion_data: dict) -> None:
     data = {
         "name": champion_data["name"],
         "role_tags": champion_data["tags"],
-        "riot_version": VERSION,
+        "riot_version": get_latest_version(),
         "raw_data": champion_data,
     }
 
@@ -50,7 +50,7 @@ def get_champion(champion_name: str) -> dict:
     """
     cached = get_cached_champion(champion_name)
 
-    if cached is not None and cached["riot_version"] == VERSION:
+    if cached is not None and cached["riot_version"] == get_latest_version():
         return cached["raw_data"]
     champion_data = fetch_champion(champion_name)
 
@@ -81,11 +81,11 @@ def get_current_patch() -> str:
     """
     Return the current Data Dragon patch version.
     """
-    parts = VERSION.split(".")
+    parts = get_latest_version().split(".")
 
     if len(parts) >= 2:
         return f"{parts[0]}.{parts[1]}"
-    return VERSION
+    return get_latest_version()
 
 
 def get_cached_champion_stats(champion_id: int, role: str, patch: str) -> dict | None:

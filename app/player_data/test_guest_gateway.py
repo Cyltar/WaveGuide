@@ -98,3 +98,76 @@ class GatewayTests(unittest.TestCase):
             self.assertEqual(result.status_code,200)
             self.assertIn('Max-Age=0',result.headers['set-cookie'])
             self.assertEqual(client.rpc.call_args.args[1]['account_id'],'verified-id')
+
+class PipelineTests(unittest.TestCase):
+    """Run the real shared chat orchestration while replacing remote providers."""
+    @classmethod
+    def setUpClass(cls):
+        from google import genai
+        from types import SimpleNamespace
+        with patch.object(genai,'Client'), patch.dict(os.environ,GEMINI_API_KEY='offline'), patch.dict(
+            sys.modules,{'app.supabase_client':SimpleNamespace(supabase=Mock(),create_user_client=Mock())}):
+            import app.app as application
+            from app.query_parser import QueryContext
+        cls.app=application
+        cls.query=QueryContext
+
+    def setUp(self):
+        from app import guest_worker
+        self.worker=guest_worker
+        self.stack=ExitStack()
+        self.addCleanup(self.stack.close)
+        # Importing the worker's runtime module is local and normally comes from the process entrypoint.
+        self.stack.enter_context(patch.dict(sys.modules,{'app.app':self.app}))
+        self.context=self.query(player_champion=None,enemy_champion=None,role=None,query_type='general')
+        self.stack.enter_context(patch.object(self.app,'parse_query',return_value=self.context))
+        self.model=self.stack.enter_context(patch.object(self.app,'ask_gemini',return_value='Grounded answer'))
+        self.stack.enter_context(patch.object(self.app,'load_relevant_knowledge',return_value=''))
+        self.store=self.stack.enter_context(patch.object(guest_worker,'rpc',return_value={'answer':'saved'}))
+        self.job={'guest':True,'conversation':str(uuid4()),'fence':str(uuid4()),'token_hash':'a'*64,
+                  'body':{'message':'A question','request_id':str(uuid4())}}
+
+    def test_shared_coaching_and_twenty_games_charge_exactly_once(self):
+        for count in (0,20):
+            with self.subTest(count=count),patch.object(self.app,'resolve_player_riot_account',return_value={'source':'history'}), \
+                    patch.object(self.app,'run_player_analysis',return_value={'games_analyzed':count}):
+                if count:
+                    self.context.player_analysis.requested=True
+                    self.context.player_analysis.mode='recent_games'
+                    self.context.player_analysis.game_count=count
+                self.worker.execute(self.job)
+                self.assertEqual(self.store.call_args.args,('finish',))
+                self.assertTrue(self.store.call_args.kwargs['charge'])
+                self.store.assert_called_once()
+                self.store.reset_mock()
+
+    def test_missing_riot_id_cannot_lookup_account_or_charge(self):
+        self.context.player_analysis.requested=True
+        self.context.player_analysis.mode='recent_games'
+        with patch.object(self.app,'get_riot_account') as lookup:
+            self.worker.execute(self.job)
+        lookup.assert_not_called()
+        self.model.assert_not_called()
+        self.assertFalse(self.store.call_args.kwargs['charge'])
+
+    def test_riot_limit_and_provider_failure_skip_finalization(self):
+        RiotRateLimitError = self.app.RiotRateLimitError
+        self.context.player_analysis.requested=True
+        self.context.player_analysis.mode='recent_games'
+        with patch.object(self.app,'resolve_player_riot_account',side_effect=RiotRateLimitError(19)):
+            with self.assertRaises(HTTPException) as error:
+                self.worker.execute(self.job)
+        self.assertEqual(error.exception.detail['code'],'RIOT_RATE_LIMITED')
+        self.store.assert_not_called()
+        self.context.player_analysis.requested=False
+        self.model.side_effect=HTTPException(503,{'code':'AI_UNAVAILABLE'})
+        with self.assertRaises(HTTPException): self.worker.execute(self.job)
+        self.store.assert_not_called()
+
+
+    def test_oversized_assembled_context_is_not_silently_truncated(self):
+        from app.guest_trial import bounded_prompt
+        with patch.dict(os.environ,WG_MAX_PROMPT_CHARS='10'):
+            with self.assertRaises(HTTPException) as error: bounded_prompt('x'*11)
+            self.assertEqual(error.exception.detail['code'],'CONTEXT_TOO_LARGE')
+            self.assertEqual(bounded_prompt('x'*10),'x'*10)
