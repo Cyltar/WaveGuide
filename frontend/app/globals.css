@@ -73,8 +73,7 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
 .chat-canvas::after { bottom: -35%; right: -42%; transform: rotate(-20deg);
   box-shadow: 0 -7px 22px rgba(71, 151, 255, .17), 0 -1px 2px rgba(151, 210, 255, .35); }
 .chat-main { width: 100%; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
-.chat-header { height: 82px; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; padding: 0 36px; }
-.header-note { color: var(--text-muted); font-size: 12px; letter-spacing: .2px; }
+.chat-header { flex-shrink: 0; display: none; align-items: center; justify-content: flex-end; padding: 0 36px; }
 .mobile-only, .mobile-brand, .navigation-backdrop { display: none; }
 .icon-button { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; height: 44px; border-radius: 50%; }
 .icon-button.mobile-only { display: none; }
@@ -103,7 +102,6 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
   box-shadow: inset 0 1px 4px rgba(203, 230, 255, .25), 0 3px 12px rgba(10, 73, 166, .3); }
 .send-button:disabled { opacity: .55; }
 .send-button svg { width: 21px; height: 21px; }
-.composer-note { text-align: center; color: var(--text-muted); font-size: 10px; margin: 10px 0 0; line-height: 1.5; }
 .message-list { max-width: 860px; margin: 0 auto; padding: 18px 32px 28px; }
 .message { min-width: 0; margin-bottom: 34px; overflow-wrap: anywhere; }
 .message-label { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 12px; margin-bottom: 10px; }
@@ -187,9 +185,8 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
     backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
   .navigation-backdrop.is-open { opacity: 1; visibility: visible; pointer-events: auto; }
   .icon-button.mobile-only { display: inline-flex; }
-  .chat-header { height: 78px; padding: max(12px, env(safe-area-inset-top)) 18px 12px; justify-content: flex-start; gap: 16px; }
+  .chat-header { display: flex; height: 78px; padding: max(12px, env(safe-area-inset-top)) 18px 12px; justify-content: flex-start; gap: 16px; }
   .mobile-brand { display: block; font-weight: 600; font-size: 16px; }
-  .header-note { display: none; }
   .chat-canvas::before { top: -35%; right: -15%; height: 58%; width: 150%; }
   .chat-canvas::after { width: 180%; bottom: -25%; right: -105%; }
   .welcome { padding: 25px 22px 34px; }
@@ -203,7 +200,6 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
   .composer-area { padding: 12px 14px max(12px, env(safe-area-inset-bottom)); }
   .composer { border-radius: 27px; gap: 8px; padding-left: 13px; }
   .composer textarea { font-size: 16px; }
-  .composer-note { font-size: 9px; }
   .message-list { padding: 18px 20px 20px; }
   .message-user { max-width: 92%; }
   .assistant-content { font-size: 14px; }
@@ -215,9 +211,15 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
 
 .privacy-link { color: #a8d8ff; text-decoration: underline; text-underline-offset: .2em; }
 .privacy-link:hover { color: white; }
-.chat-legal { max-width: 860px; margin: 9px auto 0; text-align: center; color: var(--text-secondary); font-size: 12px; line-height: 1.4; }
-.chat-legal p + p { margin-top: 4px; }
-.chat-legal span { margin-inline: 4px; }
+.chat-legal, .riot-notices { color: var(--text-secondary); font-size: 12px; text-align: center; line-height: 1.45; }
+.chat-legal { margin-top: 6px; }
+.legal-action { white-space: nowrap; }
+.legal-action > span { margin-inline: 2px; }
+.chat-home { display: flex; flex-direction: column; }
+.chat-home .welcome { flex: 1 0 auto; min-height: auto; }
+.riot-notices { max-width: 100ch; margin: 10px auto 0; padding-inline: 20px; }
+.legal-dialog p { margin: 12px 0; line-height: 1.6; color: var(--text-secondary); }
+.legal-dialog .privacy-link { display: inline-block; margin-top: 4px; }
 .auth-privacy { text-align: center; font-size: .875rem; margin-top: 1rem; }
 .privacy-page { min-height: 100dvh; padding: clamp(14px, 5vw, 72px); background: radial-gradient(ellipse at top right, #11355c, transparent 55%), var(--bg-primary); }
 .privacy-card { max-width: 76ch; margin: auto; border-radius: 20px; padding: clamp(20px, 5vw, 52px); color: var(--text-secondary); line-height: 1.7; }
