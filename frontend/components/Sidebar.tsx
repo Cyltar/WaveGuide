@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { developerNotice, fanNotice } from "@/components/riotNotices";
 import AccountPanel from "@/components/AccountPanel";
 import Icon from "@/components/Icon";
 import type { Conversation } from "@/types/chat";
@@ -80,7 +81,13 @@ export default function Sidebar({ conversations, activeSessionId, onSelectConver
           </div>
         </nav>
         <div className="sidebar-bottom">
-          <>{guest ? <div className="account-surface"><a href="/signup">Create a free account</a> · <a href="/login">Log in</a></div> : <AccountPanel email={userEmail} disabled={accountDisabled} onDeleted={onAccountDeleted} />}</>
+          <p className="sidebar-notices">{developerNotice} {fanNotice}</p>
+          {guest ? (
+            <div className="guest-auth">
+              <a className="new-chat glass" href="/signup">Create a free account</a>
+              <a className="new-chat glass" href="/login">Log in</a>
+            </div>
+          ) : <AccountPanel email={userEmail} disabled={accountDisabled} onDeleted={onAccountDeleted} />}
         </div>
       </aside>
     </>

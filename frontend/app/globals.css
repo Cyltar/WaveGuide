@@ -211,13 +211,27 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
 
 .privacy-link { color: #a8d8ff; text-decoration: underline; text-underline-offset: .2em; }
 .privacy-link:hover { color: white; }
-.chat-legal, .riot-notices { color: var(--text-secondary); font-size: 12px; text-align: center; line-height: 1.45; }
+.chat-legal { color: var(--text-secondary); font-size: 12px; text-align: center; line-height: 1.45; }
 .chat-legal { margin-top: 6px; }
 .legal-action { white-space: nowrap; }
 .legal-action > span { margin-inline: 2px; }
-.chat-home { display: flex; flex-direction: column; }
-.chat-home .welcome { flex: 1 0 auto; min-height: auto; }
-.riot-notices { max-width: 100ch; margin: 10px auto 0; padding-inline: 20px; }
+.sidebar-notices { font-size: 12px; line-height: 1.4; color: var(--text-secondary); margin-bottom: 12px; }
+.guest-auth { display: grid; gap: 11px; }
+.guest-auth .new-chat { justify-content: center; margin: 0; min-height: 44px; padding: 10px 12px; }
+.guest-auth .new-chat:last-child { background: rgba(26, 64, 109, .52); }
+.guest-counter { display: block; margin-bottom: 8px; }
+.loading-brand { display: grid; justify-items: center; gap: 14px; color: var(--text-secondary); }
+.loading-brand .brand-mark { width: 56px; height: 56px; }
+@media (prefers-reduced-motion: no-preference) {
+  .loading-brand { animation: loading-appear .18s .15s backwards; }
+  .loading-brand .brand-mark { animation: loading-wave 2s ease-in-out infinite alternate; }
+}
+@keyframes loading-appear { from { opacity: 0; } to { opacity: 1; } }
+@keyframes loading-wave { from { transform: translateY(2px) scale(.97); } to { transform: translateY(-2px) scale(1.03); } }
+@media (max-height: 640px) {
+  .sidebar { overflow-y: auto; }
+  .sidebar .history { min-height: 90px; }
+}
 .legal-dialog p { margin: 12px 0; line-height: 1.6; color: var(--text-secondary); }
 .legal-dialog .privacy-link { display: inline-block; margin-top: 4px; }
 .auth-privacy { text-align: center; font-size: .875rem; margin-top: 1rem; }

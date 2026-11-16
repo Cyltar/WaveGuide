@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import type { Message } from "@/types/chat";
+import { developerNotice, fanNotice } from "@/components/riotNotices";
 import ReactMarkdown from "react-markdown";
 import Link from "next/link";
 import Icon, { type IconName } from "@/components/Icon";
@@ -16,13 +17,6 @@ type ChatWindowProps = {
   navigationOpen: boolean;
   mobile: boolean;
 };
-
-const developerNotice = "WaveGuide isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.";
-const fanNotice = `WaveGuide was created under Riot Games' "Legal Jibber Jabber" policy using assets owned by Riot Games. Riot Games does not endorse or sponsor this project.`;
-
-function RiotNotices() {
-  return <p className="riot-notices">{developerNotice} {fanNotice}</p>;
-}
 
 const prompts: { icon: IconName; label: string; prompt: string }[] = [
   { icon: "chart", label: "Analyze my last 3 games", prompt: "Analyze my last 3 games." },
@@ -69,8 +63,7 @@ export default function ChatWindow({ messages, loading, disabled, guestLabel, on
           aria-controls="navigation" aria-expanded={navigationOpen} onClick={onOpenNavigation}><Icon name="menu" /></button>
         <span className="mobile-brand">WaveGuide</span>
       </header>
-      <div className={messages.length ? "chat-scroll" : "chat-scroll chat-home"}>
-        {messages.length > 0 && <RiotNotices />}
+      <div className="chat-scroll">
         {messages.length === 0 ? (
           <section className="welcome" aria-labelledby="welcome-title">
             <div className="welcome-inner">
@@ -101,10 +94,9 @@ export default function ChatWindow({ messages, loading, disabled, guestLabel, on
             <div ref={bottomRef} />
           </section>
         )}
-        {messages.length === 0 && <RiotNotices />}
       </div>
       <footer className="composer-area">
-        <span role="status" className="text-xs text-sky-200">{guestLabel}</span>
+        {guestLabel && <span role="status" className="guest-counter text-xs text-sky-200">{guestLabel}</span>}
         <form onSubmit={handleSubmit} className="composer glass">
           <label htmlFor="chat-input" className="sr-only">Message WaveGuide</label>
           <textarea ref={textarea} id="chat-input" value={input} disabled={disabled} rows={1}
